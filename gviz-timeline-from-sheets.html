@@ -1,0 +1,105 @@
+<html>
+  <head>
+    <title>GVIZ API Timeline Render</title>
+    <style type='text/css'>
+      body { font-family:sans-serif; font-size: 12px}
+    </style>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+
+    function parseDate(item){
+      var parts = item.substr(5, item.length - 1).split(',')
+      return new Date(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]))
+    }
+    
+    function drawChart(data) {
+      var container = document.getElementById('timeline');
+      var chart = new google.visualization.Timeline(container);
+      var dataTable = new google.visualization.DataTable();
+
+      dataTable.addColumn({ type: 'string', id: 'Phase' });
+      dataTable.addColumn({ type: 'string', id: 'Task' });
+      dataTable.addColumn({ type: 'date', id: 'Start' });
+      dataTable.addColumn({ type: 'date', id: 'End' });
+
+      var rows = [];
+      for(i=0; i<data['table']['rows'].length; i++){
+        var row =  data['table']['rows'][i];
+        rows.push([row['c'][0]['v'], row['c'][1]['v'], parseDate(row['c'][2]['v']), parseDate(row['c'][3]['v'])])
+      }
+
+      
+      dataTable.addRows(rows);
+      if(rows.length > 0){
+        chart.draw(dataTable);
+      }
+    }
+
+
+    function render(){
+
+
+      var elements = document.getElementsByTagName('input');
+      var sheetid = '';
+      var worksheet = '';
+
+      for (let i=0; i<elements.length; i++){
+        var elem = elements[i];
+        if(elem.name == 'sheetid'){
+          sheetid = elem.value;
+        }
+        if(elem.name == 'worksheet'){
+          worksheet = elem.value;
+        }
+         
+      }
+
+      var data_src = "https://docs.google.com/spreadsheets/d/"+sheetid+"/gviz/tq?tqx=out:json&sheet="+worksheet;
+
+      fetch(data_src)
+        .then(res => res.text())
+        .then(text => {
+          drawChart(JSON.parse(text.substr(47).slice(0, -2)))
+      })
+    }
+
+    google.charts.load('current', {'packages':['timeline']});
+    // google.charts.setOnLoadCallback(drawChart);
+      
+
+    </script>
+  </head>
+  <body>
+    <h3>Timeline Renderer</h3>
+    <p>Create a Google Sheet with 4 colums: Phase, Task, Start Date, End Date<br/>
+      Fill in your data, then publish the sheet using "File" -> "Publish for Web".<br/>
+      Publish the entire sheet and copy out the Sheet ID, which is the long string between two '/' marks.<br/>
+      Optionally specify the worksheet that the data is on. The gviz API query will only grab the first sheet by default.<br/>
+      <br/>
+    </p>
+    <input type='text' name='sheetid' placeholder="eIk2fhtGrEaTPJB03LmFaoo68wi2z4A-J3JPUkxeb-GM">
+    <input type='text' name='worksheet' placeholder="Sheet3 (optional)">
+    <button onclick="render();">Render</button>
+    <br/>
+    <br/>
+    <br/>
+    <div id="timeline" style="height: 600px;">
+    </div>
+    <script type="text/javascript">
+    function init(){
+        let query = new URLSearchParams(window.location.search);
+
+        let elements = document.getElementsByTagName('input');
+        for (let i=0; i<elements.length; i++){
+            let elem = elements[i];
+            let initial = query.get(elem.name);
+            elem.value = initial;
+        }
+        if(query.get('render')==="1"){
+          render();
+        }
+    }
+    init()
+    </script>
+  </body>
+</html>
